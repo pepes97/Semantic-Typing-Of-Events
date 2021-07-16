@@ -99,6 +99,7 @@ def main(model_path, only_test, type_model, batch_size):
         print("\033[1m\033[94m Start training... \033[0m \n")
         trainer.training(optim.Adam(seq2seq.parameters(), lr=2e-5), train_dataloader, dev_dataloader, 10)
         print("\033[1m\033[92m Testing... \033[0m \n")
+        trainer.model.load_state_dict(torch.load(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len175_SEED10_lr2e-5.pt"))
         mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a = trainer.prediction_test(test_dataloader)
 
     else:
