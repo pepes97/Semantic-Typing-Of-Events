@@ -16,13 +16,13 @@ class TrainerBART:
             self.type_model = type_model
             self.loss = loss
             self.model_path = model_path
+            self.best_mrr =0
+            self.patience = 0
   
     def training(self, optimizer,train_dataloader, dev_dataloader, epochs):
 
         logging.info('Starting training')
         steps_done = 0
-        best_mrr =0
-        patience = 0
 
         for epoch in range(epochs):
             logging.info(f'Epoch {epoch + 1}/{epochs}')
@@ -59,7 +59,7 @@ class TrainerBART:
                 training_metrics['loss'] = train_loss_n / train_loss_d if train_loss_d > 0 else 0.0
 
             
-            validation_metrics, best_mrr, patience = self.evaluate(dev_dataloader, best_mrr, patience)
+            validation_metrics, self.best_mrr, self.patience = self.evaluate(dev_dataloader, self.best_mrr, self.patience)
             
             keys = set()
             keys |= set(training_metrics.keys())
@@ -72,7 +72,7 @@ class TrainerBART:
 
             print(tabulate(table, headers=('metric', 'train', 'dev')) + '\n')
 
-            if patience ==3:
+            if self.patience ==3:
                 print("\033[1m No improvement for 3 epochs in a row, stop \033[0m \n")
                 break
                 
@@ -197,9 +197,15 @@ class TrainerBART:
             best_mrr = metrics['mrr_verbs']
             patience = 0
             torch.save(self.model.state_dict(),self.model_path + "/bart_model_"+self.type_model+model_directory(self.model_path)+"_len175_SEED10_lr2e-5.pt")
+            with open(self.model_path + "/best_mrr_"+self.type_model+".txt", "w") as f:
+              f.write(str(best_mrr))
+            with open(self.model_path + "/patience_"+self.type_model+".txt", "w") as f:
+              f.write(str(patience))
             print(f"\033[1m Performance improvement, model saved in {self.model_path} \033[0m \n")
         else:
             patience +=1
+            with open(self.model_path + "/patience_"+self.type_model+".txt", "w") as f:
+              f.write(str(patience))
 
         return metrics, best_mrr, patience
     
@@ -268,7 +274,7 @@ class TrainerBART:
 
                 def test_arg(gold_elem, predictions):
                     found = False
-                    pattern = r"{(.*?)}"
+                    pattern = r"{{(.*?)}}"
                     try:
                         gold_arg = re.findall(pattern, gold_elem, flags=0)[0].strip()
                     except:
