@@ -107,11 +107,11 @@ def main(model_path, only_test, type_model, batch_size):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-path", type=str, required=True,
-                        help="path where you want to save the model, example = 'models/their_split_mixed/'")
+                        help="the path where you want to save the model, you can to choose between: 'models/their_split', 'models/their_split_mixed', 'models/their_split_all_processes', 'models/their_split_WORD'")
     parser.add_argument("--type-model", type=str, required=True, 
-                        help="choose between 'base' or 'large'")
+                        help="the model of BART, you can to choose between 'base' or 'large'")
     parser.add_argument("--batch-size", type=int, default=4,
-                        help="batch size")
+                        help="size of the batch")
     parser.add_argument("--only-test", type=str, default=False,
                         help="flag for only testing the model")
     
