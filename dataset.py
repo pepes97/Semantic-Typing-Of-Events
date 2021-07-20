@@ -4,10 +4,11 @@ from torch.utils.data import Dataset
 
 
 class Seq2SeqDatasetBART(Dataset):
-    def __init__(self, tokenizer, path_file):
+    def __init__(self, tokenizer, path_file, max_len):
         self.tokenizer = tokenizer
         self.path_file = path_file
         self.data = []
+        self.max_len = max_len
         self.setup()
 
     def setup(self):
@@ -61,9 +62,11 @@ class Seq2SeqDatasetBART(Dataset):
                 if len(encoded_source)>1:
                     encoded_source = [" ".join(e for e in encoded_source)]
 
-
-                target = [new_title + point + verb + marker + verb_sense + point + arg + marker + arg_sense + point]
-
+                if self.max_len==175:
+                    target = [new_title + point + verb + marker + verb_sense + point + arg + marker + arg_sense + point]
+                elif self.max_len == 20:
+                    target = [new_title]
+                    
                 encoded_s,encoded_mask, encoded_t = self.encoded_sentences(encoded_source, target)
 
                 data = {

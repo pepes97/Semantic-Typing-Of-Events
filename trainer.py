@@ -9,13 +9,14 @@ from utils import model_directory
 
 
 class TrainerBART:
-    def __init__(self, tokenizer, model, loss, device, model_path, type_model):
+    def __init__(self, tokenizer, model, loss, device, model_path, type_model, max_len, patience):
             self.device = device
             self.tokenizer = tokenizer
             self.model = model
             self.type_model = type_model
             self.loss = loss
             self.model_path = model_path
+            self.max_len = max_len
             self.best_mrr =0
             self.patience = 0
   
@@ -196,7 +197,7 @@ class TrainerBART:
         if best_mrr < metrics['mrr_verbs']:
             best_mrr = metrics['mrr_verbs']
             patience = 0
-            torch.save(self.model.state_dict(),self.model_path + "/bart_model_"+self.type_model+model_directory(self.model_path)+"_len175_SEED10_lr2e-5.pt")
+            torch.save(self.model.state_dict(),self.model_path + "/bart_model_"+self.type_model+model_directory(self.model_path)+"_len"+self.max_len+"_SEED10_lr2e-5.pt")
             with open(self.model_path + "/best_mrr_"+self.type_model+".txt", "w") as f:
               f.write(str(best_mrr))
             with open(self.model_path + "/patience_"+self.type_model+".txt", "w") as f:

@@ -65,7 +65,7 @@ def collate_fn(samples):
     return dictionary
 
 
-def main(model_path, only_test, type_model, batch_size):
+def main(model_path, only_test, type_model, batch_size, max_len):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     train_set, dev_set, test_set = find_files(model_path)
@@ -76,11 +76,11 @@ def main(model_path, only_test, type_model, batch_size):
     bart_model = BartForConditionalGeneration.from_pretrained("facebook/bart-"+type_model)
     
     print("\033[1mCreating train dataset \033[0m")
-    train_dataset = Seq2SeqDatasetBART(tokenizer=tokenizer, path_file=train_set)
+    train_dataset = Seq2SeqDatasetBART(tokenizer=tokenizer, path_file=train_set, max_len=max_len)
     print("\033[1mCreating dev dataset \033[0m")
-    dev_dataset = Seq2SeqDatasetBART(tokenizer=tokenizer, path_file=dev_set)
+    dev_dataset = Seq2SeqDatasetBART(tokenizer=tokenizer, path_file=dev_set, max_len=max_len)
     print("\033[1mCreating test dataset \033[0m")
-    test_dataset = Seq2SeqDatasetBART(tokenizer=tokenizer, path_file=test_set)
+    test_dataset = Seq2SeqDatasetBART(tokenizer=tokenizer, path_file=test_set, max_len=max_len)
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
     dev_dataloader = DataLoader(dev_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
@@ -90,20 +90,20 @@ def main(model_path, only_test, type_model, batch_size):
     params = HyperparamsBART()
     seq2seq = Seq2SeqModelBART(tokenizer=tokenizer, model=bart_model, hparams=params).to(device)
 
-    trainer = TrainerBART(tokenizer,seq2seq,torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id), device, model_path, type_model)
-    if  os.path.isfile(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len175_SEED10_lr2e-5.pt"):
-        trainer.model.load_state_dict(torch.load(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len175_SEED10_lr2e-5.pt"))
+    trainer = TrainerBART(tokenizer,seq2seq,torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id), device, model_path, type_model, max_len)
+    if  os.path.isfile(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+max_len+"_SEED10_lr2e-5.pt"):
+        trainer.model.load_state_dict(torch.load(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+max_len+"_SEED10_lr2e-5.pt"))
         with open(model_path + "/best_mrr_"+type_model+".txt") as f:
-          trainer.best_mrr = int(f.readline())
+          trainer.best_mrr = float(f.readline().rstrip())
         with open(model_path + "/patience_"+type_model+".txt") as f:
-          trainer.patience = int(f.readline())
+          trainer.patience = int(f.readline().rstrip())
         print("\033[1mModel loaded \033[0m \n")
     
     if not only_test:
         print("\033[1m\033[94m Start training... \033[0m \n")
         trainer.training(optim.Adam(seq2seq.parameters(), lr=2e-5), train_dataloader, dev_dataloader, 10)
         print("\033[1m\033[92m Testing... \033[0m \n")
-        trainer.model.load_state_dict(torch.load(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len175_SEED10_lr2e-5.pt"))
+        trainer.model.load_state_dict(torch.load(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+max_len+"_SEED10_lr2e-5.pt"))
         mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a = trainer.prediction_test(test_dataloader)
 
     else:
@@ -123,11 +123,14 @@ if __name__ == "__main__":
                         help="size of the batch")
     parser.add_argument("--only-test", type=str, default=False,
                         help="flag for only testing the model")
+    parser.add_argument("--max-len", type=int, default= 175,
+                        help="max length of sentences in generation phase")  
     
     args = parser.parse_args()
     model_path = args.model_path
     only_test = args.only_test
     type_model = args.type_model
     batch_size = args.batch_size
+    max_len = args.max_len
 
-    main(model_path, only_test, type_model, batch_size)
+    main(model_path, only_test, type_model, batch_size, max_len)
