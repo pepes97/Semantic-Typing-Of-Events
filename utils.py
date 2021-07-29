@@ -1,8 +1,10 @@
 import os
 
 def model_directory(model_path):
-    if "their_split_all_processes" in model_path:
+    if "their_split_all_processes_mixed" in model_path:
         return "_all_processes_mixed_their_split"
+    elif "their_split_all_processes" in model_path:
+        return "_all_processes_their_split"
     elif "their_split_mixed" in model_path:
         return "_mixed_their_split"
     elif "their_split_WORD" in model_path:

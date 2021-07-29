@@ -9,7 +9,7 @@ from utils import model_directory
 
 
 class TrainerBART:
-    def __init__(self, tokenizer, model, loss, device, model_path, type_model, max_len, patience):
+    def __init__(self, tokenizer, model, loss, device, model_path, type_model, max_len):
             self.device = device
             self.tokenizer = tokenizer
             self.model = model
@@ -17,7 +17,7 @@ class TrainerBART:
             self.loss = loss
             self.model_path = model_path
             self.max_len = max_len
-            self.best_mrr =0
+            self.best_mrr = 0
             self.patience = 0
   
     def training(self, optimizer,train_dataloader, dev_dataloader, epochs):
@@ -197,7 +197,7 @@ class TrainerBART:
         if best_mrr < metrics['mrr_verbs']:
             best_mrr = metrics['mrr_verbs']
             patience = 0
-            torch.save(self.model.state_dict(),self.model_path + "/bart_model_"+self.type_model+model_directory(self.model_path)+"_len"+self.max_len+"_SEED10_lr2e-5.pt")
+            torch.save(self.model.state_dict(),self.model_path + "/bart_model_"+self.type_model+model_directory(self.model_path)+"_len"+str(self.max_len)+"_SEED10_lr2e-5.pt")
             with open(self.model_path + "/best_mrr_"+self.type_model+".txt", "w") as f:
               f.write(str(best_mrr))
             with open(self.model_path + "/patience_"+self.type_model+".txt", "w") as f:
@@ -226,7 +226,7 @@ class TrainerBART:
             source = batch["source"].to(self.device)
             target = batch["target"].to(self.device)
             
-            generate_batch = self.model.model.generate(source,max_length=175, num_beams=10,num_return_sequences=10,early_stopping=True)
+            generate_batch = self.model.model.generate(source,max_length=20, num_beams=10,num_return_sequences=10,early_stopping=True)
             
             for i in range(len(target)):     
                 gold_elem = self.tokenizer.decode(target[i], skip_special_tokens=True)
@@ -315,5 +315,161 @@ class TrainerBART:
                 mrr_v, rec1v, rec10v = test_verb(gold_elem, new_predictions)
                 mrr_a,rec1a, rec10a = test_arg(gold_elem, new_predictions)
         
+
+        return  mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a
+    
+
+    def prediction_final(self,test_dataloader):
+        self.model.eval()
+        
+        recall1_verb =[]
+        recall10_verb= []
+        mrr_verb = []
+
+        recall1_arg =[]
+        recall10_arg = []
+        mrr_arg = []
+
+        n = 20 if self.max_len == 20 else 40
+
+        iterator = tqdm(test_dataloader)
+        for batch in iterator:
+            source = batch["source"].to(self.device)
+            target = batch["target"].to(self.device)
+
+            try:
+                generate_batch = self.model.model.generate(source, max_length=n, num_beams=100,num_return_sequences=100, early_stopping=True)
+            except:
+                continue
+            for i in range(len(target)):  
+                verbs_pred = []
+                args_pred = []
+                
+                gold_elem = self.tokenizer.decode(target[i], skip_special_tokens=True)
+                predictions = generate_batch[i*100:i*100+100]
+                
+                new_predictions = []
+                for j in range(len(predictions)):
+                    new_predictions.append(self.tokenizer.decode(predictions[j], skip_special_tokens=True))
+                
+                def find_verbs_args(gold_elem,new_predictions, verbs_pred, args_pred):
+
+                    for idx,pred in enumerate(new_predictions):
+                        pattern = r"{(.*?)}"
+                        try: 
+                            pred_verb = re.findall(pattern, pred, flags=0)[0].strip()
+                            if pred_verb not in verbs_pred:
+                                verbs_pred.append(pred_verb)
+                        except:
+                            continue
+                
+
+                    for idx,pred in enumerate(new_predictions):
+                        pattern = r"{{(.*?)}}"
+                        try:
+                            pred_arg = re.findall(pattern, pred, flags=0)[0].strip()
+                            if pred_arg not in args_pred:
+                                args_pred.append(pred_arg)
+                        except:
+                            continue
+
+                    return verbs_pred, args_pred
+            
+
+                def test_verb(gold_elem, verbs_pred):
+                    
+                    found = False
+                    pattern = r"{(.*?)}"
+                    gold_verb = re.findall(pattern, gold_elem, flags=0)[0].strip()
+                    
+                    for idx,pred_verb in enumerate(verbs_pred):
+                        if idx == 0:
+                            if pred_verb == gold_verb:
+                                recall1_verb.append(1.)
+                                recall10_verb.append(1.)
+                                mrr_verb.append(1.)
+                                found=True
+                                break
+                            else:
+                                recall1_verb.append(0.)
+                        else:
+                            if idx < 10:
+                                if pred_verb == gold_verb:
+                                    recall10_verb.append(1.)
+                                    mrr_verb.append(1./float(idx+1))
+                                    found=True
+                                    break
+                            else:
+                                if pred_verb == gold_verb:
+                                    mrr_verb.append(1./float(idx+1))
+                                    recall10_verb.append(0.)
+                                    found=True
+                                    break
+
+
+                    if found ==False:
+                        recall10_verb.append(0.)
+                        mrr_verb.append(0.)
+
+                    return mrr_verb,recall1_verb,recall10_verb
+
+
+                def test_arg(gold_elem, args_pred):
+                    found = False
+                    pattern = r"{{(.*?)}}"
+                    try:
+                        gold_arg = re.findall(pattern, gold_elem, flags=0)[0].strip()
+                    except:
+                        return mrr_arg,recall1_arg,recall10_arg
+
+                    
+                    for idx,pred_arg in enumerate(args_pred):
+                        if idx == 0:
+                            if pred_arg == gold_arg:
+                                recall1_arg.append(1.)
+                                recall10_arg.append(1.)
+                                mrr_arg.append(1.)
+                                found=True
+                                break
+                            else:
+                                recall1_arg.append(0.)
+                        else:
+                            if idx < 10:
+                                if pred_arg == gold_arg:
+                                    recall10_arg.append(1.)
+                                    mrr_arg.append(1./float(idx+1))
+                                    found=True
+                                    break
+                            else:
+                                if pred_arg == gold_arg:
+                                    mrr_arg.append(1./float(idx+1))
+                                    recall10_arg.append(0.)
+                                    found=True
+                                    break
+
+                    if found ==False:
+                        recall10_arg.append(0.)
+                        mrr_arg.append(0.)
+
+                    return mrr_arg,recall1_arg,recall10_arg
+
+                start = 200
+                num_ret=200
+                verbs_pred, args_pred = find_verbs_args(gold_elem, new_predictions, verbs_pred, args_pred)
+                
+                while len(args_pred)<10:
+                    new_predictions = []
+                    try:
+                        pred_new = self.model.model.generate(source[i].unsqueeze(0), max_length=n, num_beams=start,num_return_sequences=num_ret, early_stopping=True)
+                    except:
+                        break
+                    for j in range(len(pred_new)):
+                        new_predictions.append(self.tokenizer.decode(pred_new[j], skip_special_tokens=True))
+                    start += 100
+                    num_ret +=100
+                    verbs_pred, args_pred = find_verbs_args(gold_elem, new_predictions, verbs_pred, args_pred)
+            
+                mrr_v, rec1v, rec10v = test_verb(gold_elem, verbs_pred) 
+                mrr_a,rec1a, rec10a = test_arg(gold_elem, args_pred)
 
         return  mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a
