@@ -84,10 +84,10 @@ class Seq2SeqDatasetBART(Dataset):
 
     def encoded_sentences(self, source, target):
 
-        encoded_source = self.tokenizer.encode(self.tokenizer.tokenize(source[0]), truncation = True)
+        encoded_source = self.tokenizer.encode(self.tokenizer.tokenize(source[0]), truncation = True, max_length=1024)
         encoded_s = torch.tensor(encoded_source)
 
-        encoded_target = self.tokenizer.encode(self.tokenizer.tokenize(target[0]))
+        encoded_target = self.tokenizer.encode(self.tokenizer.tokenize(target[0]), truncation = True, max_length=1024)
 
         encoded_t = torch.tensor(encoded_target)
         encoded_mask = torch.ones((encoded_s.shape))
