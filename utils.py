@@ -14,7 +14,11 @@ def model_directory(model_path):
 
 def find_files(model_path):
     train, dev, test = "","",""
-    directory_files = model_path.split("/")[-1]
+    directory_files = model_path.split("/")
+    if len(directory_files)>2:
+      directory_files = directory_files[1]
+    else:
+      directory_files = directory_files[-1]
     path_dir = os.path.join("files", directory_files)
     files = [os.path.join(path_dir, f) for f in os.listdir(path_dir) if os.path.isfile(os.path.join(path_dir, f))]   
     for f in files:
