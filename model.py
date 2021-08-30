@@ -2,8 +2,8 @@ import torch.nn as nn
 
 class HyperparamsBART():
    def __init__(self):
-     self.freeze_encoders = True
-     self.freeze_embeddings = True 
+     self.freeze_encoders = False
+     self.freeze_embeddings = False 
 
 class Seq2SeqModelBART(nn.Module):
   def __init__(self, tokenizer, model, hparams):

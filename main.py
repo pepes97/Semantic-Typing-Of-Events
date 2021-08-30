@@ -67,9 +67,9 @@ def collate_fn(samples):
     return dictionary
 
 
-def main(model_path, only_test, type_model, batch_size, max_len, inverse_model):
+def main(model_path, only_test, type_model, batch_size, max_len, inverse_model, train_downsizing, k_action, k_object):
 
-    print(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_SEED10_lr2e-5.pt")
+    print(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_downsizing"+str(train_downsizing)+"k_action"+str(k_action)+"k_object"+str(k_object)+"_SEED10_lr2e-5.pt")
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"\033[1mDevice \033[0m: {device} \033[0m")
     train_set, dev_set, test_set = find_files(model_path)
@@ -81,23 +81,29 @@ def main(model_path, only_test, type_model, batch_size, max_len, inverse_model):
     
     if not inverse_model:
       print("\033[1mCreating train dataset \033[0m")
-      train_dataset = Seq2SeqDatasetBART(tokenizer=tokenizer, path_file=train_set, max_len=max_len)
+      train_dataset = Seq2SeqDatasetBART(tokenizer=tokenizer, path_file=train_set, max_len=max_len, downsizing=train_downsizing, k_action = k_action, k_object = k_object)
       print("\033[1mCreating dev dataset \033[0m")
       dev_dataset = Seq2SeqDatasetBART(tokenizer=tokenizer, path_file=dev_set, max_len=max_len)
       print("\033[1mCreating test dataset \033[0m")
       test_dataset = Seq2SeqDatasetBART(tokenizer=tokenizer, path_file=test_set, max_len=max_len)
     else:
       print("\033[1mCreating train dataset Inverse\033[0m")
-      train_dataset = Seq2SeqDatasetBARTInverse(tokenizer=tokenizer, path_file=train_set, max_len=max_len)
+      train_dataset = Seq2SeqDatasetBARTInverse(tokenizer=tokenizer, path_file=train_set, max_len=max_len, train_data = True)
       print("\033[1mCreating dev dataset Inverse\033[0m")
       dev_dataset = Seq2SeqDatasetBARTInverse(tokenizer=tokenizer, path_file=dev_set, max_len=max_len)
       print("\033[1mCreating test dataset Inverse\033[0m")
       test_dataset = Seq2SeqDatasetBARTInverse(tokenizer=tokenizer, path_file=test_set, max_len=max_len)
     
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-    dev_dataloader = DataLoader(dev_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
-    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+    if not inverse_model:
+      train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+      print(f"Len Train: {len(train_dataloader)*batch_size}")
+    else:
+      train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 
+    dev_dataloader = DataLoader(dev_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+    print(f"Len Dev: {len(dev_dataloader)*batch_size}")
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+    print(f"Len Test: {len(test_dataloader)*batch_size}")
     print("\033[1mCheck Dataloader \033[0m")
     for batch in train_dataloader:
       for source, target, att in zip(batch['source'][: 25], batch['target'][: 25],batch['attention_mask'][: 25]):
@@ -114,39 +120,44 @@ def main(model_path, only_test, type_model, batch_size, max_len, inverse_model):
     seq2seq = Seq2SeqModelBART(tokenizer=tokenizer, model=bart_model, hparams=params).to(device)
 
     if not inverse_model:
-      trainer = TrainerBART(tokenizer,seq2seq,torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id), device, model_path, type_model, max_len)
+      trainer = TrainerBART(tokenizer,seq2seq,torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id), device, model_path, type_model, max_len, downsizing = train_downsizing, k_action=k_action, k_object=k_object)
     else:
       trainer = TrainerBARTInverse(tokenizer,seq2seq,torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id), device, model_path, type_model, max_len)
 
-    if  os.path.isfile(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_SEED10_lr2e-5.pt"):
-        trainer.model.load_state_dict(torch.load(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_SEED10_lr2e-5.pt", map_location=device))
+    if  os.path.isfile(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_downsizing"+str(train_downsizing)+"k_action"+str(k_action)+"k_object"+str(k_object)+"_SEED10_lr2e-5.pt"):
+        trainer.model.load_state_dict(torch.load(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_downsizing"+str(train_downsizing)+"k_action"+str(k_action)+"k_object"+str(k_object)+"_SEED10_lr2e-5.pt", map_location=device))
 
+        print("\033[1mModel loaded \033[0m \n")
+  
+    if not only_test:
         if not inverse_model:
-
-          with open(model_path + "/best_mrr_"+type_model+".txt") as f:
-            trainer.best_mrr = float(f.readline().rstrip())
+          if os.path.exists(model_path + "/best_mrr_"+type_model+".txt"):
+            with open(model_path + "/best_mrr_"+type_model+".txt") as f:
+              trainer.best_mrr = float(f.readline().rstrip())
 
         else:
           with open(model_path + "/best_bleu_"+type_model+".txt") as f:
             trainer.best_bleu = float(f.readline().rstrip())
 
-        with open(model_path + "/patience_"+type_model+".txt") as f:
-          trainer.patience = int(f.readline().rstrip())
-        print("\033[1mModel loaded \033[0m \n")
-  
-    if not only_test:
+        if os.path.exists(model_path + "/patience_"+type_model+".txt"):
+          with open(model_path + "/patience_"+type_model+".txt") as f:
+            trainer.patience = int(f.readline().rstrip())
         print("\033[1m\033[94mStart training... \033[0m \n")
         trainer.training(optim.Adagrad(seq2seq.parameters(), lr=2e-5), train_dataloader, dev_dataloader, 10)
         print("\033[1m\033[92mTesting... \033[0m \n")
-        trainer.model.load_state_dict(torch.load(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_SEED10_lr2e-5.pt"))
+        trainer.model.load_state_dict(torch.load(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_downsizing"+str(train_downsizing)+"k_action"+str(k_action)+"k_object"+str(k_object)+"_SEED10_lr2e-5.pt", map_location=device))
+        
+        if not inverse_model:
+          mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a = trainer.prediction_final(test_dataloader)
+        else: 
+          bleu_score = trainer.prediction_final(test_dataloader)
+    else:
+        print("\033[1m\033[92m Testing... \033[0m \n")
         if not inverse_model:
           mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a = trainer.prediction_final(test_dataloader)
         else:
           bleu_score = trainer.prediction_final(test_dataloader)
-    else:
-        print("\033[1m\033[92m Testing... \033[0m \n")
-        mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a = trainer.prediction_final(test_dataloader)
-
+          
     if not inverse_model:
       print(f"\033[1m***** VERBS ***** -> MRR: {str(np.average(mrr_v))}, RECALL@1: {str(np.average(rec1v))}, RECALL@10: {str(np.average(rec10v))} \033[0m \n")
       print(f"\033[1m***** ARGS ****** -> MRR: {str(np.average(mrr_a))}, RECALL@1: {str(np.average(rec1a))}, RECALL@10: {str(np.average(rec10a))} \033[0m")
@@ -154,6 +165,7 @@ def main(model_path, only_test, type_model, batch_size, max_len, inverse_model):
       print(f"\033[1m***** BLUE SCORE ***** -> {str(np.average(bleu_score))}")
 
 if __name__ == "__main__":
+  
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-path", type=str, required=True,
                         help="the path where you want to save the model, you can to choose between: 'models/their_split', 'models/their_split_mixed', 'models/their_split_all_processes', 'models/their_split_WORD'")
@@ -167,7 +179,14 @@ if __name__ == "__main__":
                         help="max length of sentences in generation phase")  
     parser.add_argument("--inverse-model", type=str, default=False,
                         help="flag for inverse model: event to processes") 
+    parser.add_argument("--train-downsizing", type=int, default=None,
+                        help="downsizing training") 
+    parser.add_argument("--k-action", type=int, default=None,
+                        help="take k sentences for each action for training dataset") 
+    parser.add_argument("--k-object", type=int, default=None,
+                        help="take k sentences for each object for training dataset") 
     
+
     args = parser.parse_args()
     model_path = args.model_path
     only_test = args.only_test
@@ -175,5 +194,8 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     max_len = args.max_len
     inverse_model = args.inverse_model
+    train_downsizing = args.train_downsizing
+    k_action = args.k_action
+    k_object = args.k_object
 
-    main(model_path, only_test, type_model, batch_size, max_len, inverse_model)
+    main(model_path, only_test, type_model, batch_size, max_len, inverse_model, train_downsizing, k_action,k_object)

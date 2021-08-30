@@ -3,19 +3,25 @@ import torch
 from torch.utils.data import Dataset
 
 class Seq2SeqDatasetBARTInverse(Dataset):
-  def __init__(self, tokenizer, path_file, max_len):
+  def __init__(self, tokenizer, path_file, max_len, train_data=False, downsizing=None):
     self.tokenizer = tokenizer
     self.path_file = path_file
     self.data = []
     self.max_len = max_len
-    self.setup()
+    self.train_data = train_data
+    self.downsizing = downsizing
+
+    
+
 
   def setup(self):
 
     with open(self.path_file) as f:
       for idx, line in tqdm(enumerate(f), desc='Reading lines'):
+        
         line = line.strip()
         line = line.split("\t")
+        code_sentence = line[0]
         title = line[1]
         split_title = title.split()
 
@@ -74,7 +80,13 @@ class Seq2SeqDatasetBARTInverse(Dataset):
             "attention_mask": encoded_mask,
             "target":encoded_t,
         }
+        data_inv = {
+            "source": encoded_t,
+            "target":encoded_s,
+        }
         self.data.append(data)
+        if self.train_data:
+            self.data.append(data_inv)
 
   def __len__(self):
     return len(self.data)

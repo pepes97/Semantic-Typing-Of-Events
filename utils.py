@@ -16,7 +16,7 @@ def find_files(model_path):
     train, dev, test = "","",""
     directory_files = model_path.split("/")
     if len(directory_files)>2:
-      directory_files = directory_files[1]
+      directory_files = "their_split_all_processes"
     else:
       directory_files = directory_files[-1]
     path_dir = os.path.join("files", directory_files)

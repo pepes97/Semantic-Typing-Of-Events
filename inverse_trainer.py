@@ -7,6 +7,7 @@ import torch
 import numpy as np
 from utils import model_directory
 from sacrebleu import corpus_bleu
+import json
 
 class TrainerBARTInverse():
   def __init__(self, tokenizer, model, loss, device, model_path, type_model, max_len):
@@ -84,22 +85,22 @@ class TrainerBARTInverse():
 
   def evaluate(self,dev_dataloader, best_bleu, patience):
     self.model.eval()
-    
-    bleu_score = []
-    iterator = tqdm(dev_dataloader)
-    for batch in iterator:
-        source = batch["source"].to(self.device)
-        target = batch["target"].to(self.device)
-        
-        n = 100 if self.max_len == 100 else 200
-        try:
-            generate_batch = self.model.model.generate(source,max_length=n, num_beams=10,num_return_sequences=1,early_stopping=True)
-        except:
-            continue
-        decode_source = [self.tokenizer.decode(source[i], skip_special_tokens=True) for i in range(len(source))]
-        gold_elem =  [self.tokenizer.decode(target[i], skip_special_tokens=True) for i in range(len(target))]
-        predictions = [self.tokenizer.decode(generate_batch[i*1:i*1+1][0], skip_special_tokens=True) for i in range(len(target))]
-        bleu_score.append(corpus_bleu(predictions, [gold_elem]).score)
+    with torch.no_grad():
+      bleu_score = []
+      iterator = tqdm(dev_dataloader)
+      for batch in iterator:
+          source = batch["source"].to(self.device)
+          target = batch["target"].to(self.device)
+          
+          n = 265
+          try:
+              generate_batch = self.model.model.generate(source,max_length=n, num_beams=10,num_return_sequences=1,early_stopping=True)
+          except:
+              continue
+          decode_source = [self.tokenizer.decode(source[i], skip_special_tokens=True) for i in range(len(source))]
+          gold_elem =  [self.tokenizer.decode(target[i], skip_special_tokens=True) for i in range(len(target))]
+          predictions = [self.tokenizer.decode(generate_batch[i*1:i*1+1][0], skip_special_tokens=True) for i in range(len(target))]
+          bleu_score.append(corpus_bleu(predictions, [gold_elem]).score)
 
 
     
@@ -123,25 +124,28 @@ class TrainerBARTInverse():
 
   def prediction_final(self,dev_dataloader):
         self.model.eval()
-        
-        bleu_score = []
-        iterator = tqdm(dev_dataloader)
-        for batch in iterator:
-            source = batch["source"].to(self.device)
-            target = batch["target"].to(self.device)
-            
-            generate_batch = self.model.model.generate(source,max_length=100, num_beams=10,num_return_sequences=1,early_stopping=True)
-            decode_source = [self.tokenizer.decode(source[i], skip_special_tokens=True) for i in range(len(source))]
-            gold_elem =  [self.tokenizer.decode(target[i], skip_special_tokens=True) for i in range(len(target))]
-            predictions = [self.tokenizer.decode(generate_batch[i*1:i*1+1][0], skip_special_tokens=True) for i in range(len(target))]
-            bleu_score.append(corpus_bleu(predictions, [gold_elem]).score)
-
-            for i in range(len(target)):
-              print("**GOLD PROCESSES**")
-              print(gold_elem[i])
-              print("**PREDICTION PROCESSES**")
-              print(predictions[i])
-        
-             
+        with torch.no_grad():
+          bleu_score = []
+          iterator = tqdm(dev_dataloader)
+          data = {}
+          index = 0
+          n = 265
+          for batch in iterator:
+              source = batch["source"].to(self.device)
+              target = batch["target"].to(self.device)
+              
+              generate_batch = self.model.model.generate(source,max_length=n, num_beams=10,num_return_sequences=1,early_stopping=True)
+              decode_source = [self.tokenizer.decode(source[i], skip_special_tokens=True) for i in range(len(source))]
+              gold_elem =  [self.tokenizer.decode(target[i], skip_special_tokens=True) for i in range(len(target))]
+              predictions = [self.tokenizer.decode(generate_batch[i*1:i*1+1][0], skip_special_tokens=True) for i in range(len(target))]
+              bleu_score.append(corpus_bleu(predictions, [gold_elem]).score)
+              
+              
+              for i in range(len(target)):
+                data[index] = {"source": decode_source[i], "gold_process": gold_elem[i], "pred_process": predictions[i]}
+                index+=1
+                
+          with open(self.model_path + "/output.json", "w") as f:
+            json.dump(data, f)
         
         return bleu_score
