@@ -23,4 +23,4 @@ python main.py --model-path model_path --type-model type_model --batch-size batc
 
 `only_test` is the boolean for only testing the model
 
-`max_len` is max length of sentences in generation phase
+`max_len` is max length of sentences in generation phase, default is 175
