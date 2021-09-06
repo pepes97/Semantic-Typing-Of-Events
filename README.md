@@ -4,7 +4,7 @@
 # Setup
 
 ```
-conda create --n semantic-typing-sveva python=3.7.10
+conda create --name semantic-typing-sveva python=3.7.10
 conda activate semantic-typing-sveva
 pip install -r requirements.txt
 ```
