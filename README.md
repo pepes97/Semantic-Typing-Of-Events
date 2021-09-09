@@ -19,8 +19,8 @@ python main.py --model-path model_path --type-model type_model --batch-size batc
 
 `type_model` is the model of BART, you can to choose between `base` or `large`.
 
-`batch_size` is size of the batch, default is 4
+`batch_size` is size of the batch, default is 2
 
-`only_test` is the boolean for only testing the model
+`only_test` is the boolean for only testing the model, default is False
 
-`max_len` is max length of sentences in generation phase, default is 175
+`max_len` used to distinguish between with and without glosses, default is 20 refers to without glosses and 175 is with glosses
