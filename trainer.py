@@ -1,25 +1,20 @@
-import logging
-from utils import model_directory
-from tabulate import tabulate
-from tqdm import tqdm
 import re
 import torch
+import logging
 import numpy as np
+from tqdm import tqdm
+from tabulate import tabulate
 from utils import model_directory
 
-
 class TrainerBART:
-    def __init__(self, tokenizer, model, loss, device, model_path, type_model, max_len, downsizing=None, k_action=None, k_object=None):
+    def __init__(self, tokenizer, model, loss, device, model_path, type_model, max_len):
             self.device = device
             self.tokenizer = tokenizer
             self.model = model
             self.type_model = type_model
             self.loss = loss
             self.model_path = model_path
-            self.downsizing = downsizing
             self.max_len = max_len
-            self.k_action = k_action
-            self.k_object = k_object
             self.best_mrr = 0
             self.patience = 0
   
@@ -212,119 +207,11 @@ class TrainerBART:
                     f.write(str(patience))
 
         return metrics, best_mrr, patience
-    
-    def prediction_test(self,test_dataloader):
-        self.model.eval()
-        with torch.no_grad():
-            recall1_verb =[]
-            recall10_verb= []
-            mrr_verb = []
-
-            recall1_arg =[]
-            recall10_arg = []
-            mrr_arg = []
-
-            iterator = tqdm(test_dataloader)
-            for batch in iterator:
-                source = batch["source"].to(self.device)
-                target = batch["target"].to(self.device)
-                
-                generate_batch = self.model.model.generate(source,max_length=20, num_beams=10,num_return_sequences=10,early_stopping=True)
-                
-                for i in range(len(target)):     
-                    gold_elem = self.tokenizer.decode(target[i], skip_special_tokens=True)
-                    predictions = generate_batch[i*10:i*10+10]
-                    
-                    new_predictions = []
-                    for j in range(len(predictions)):
-                        new_predictions.append(self.tokenizer.decode(predictions[j], skip_special_tokens=True))
-                    
-
-                    def test_verb(gold_elem, predictions):
-                        found = False
-                        pattern = r"{(.*?)}"
-                        gold_verb = re.findall(pattern, gold_elem, flags=0)[0].strip()
-                        
-                        for idx,pred in enumerate(predictions):
-                            pattern = r"{(.*?)}"
-                            try:
-                                pred_verb = re.findall(pattern, pred, flags=0)[0].strip()
-                            except:
-                                if idx==0:
-                                    recall1_verb.append(0.)
-                                continue
-                            if idx == 0:
-                                if pred_verb == gold_verb:
-                                    recall1_verb.append(1.)
-                                    recall10_verb.append(1.)
-                                    mrr_verb.append(1.)
-                                    found=True
-                                    break
-                                else:
-                                    recall1_verb.append(0.)
-                            else:
-                                if pred_verb == gold_verb:
-                                    recall10_verb.append(1.)
-                                    mrr_verb.append(1./float(idx+1))
-                                    found=True
-                                    break
-
-                        if found ==False:
-                            recall10_verb.append(0.)
-                            mrr_verb.append(0.)
-
-                        return mrr_verb,recall1_verb,recall10_verb
-
-
-                    def test_arg(gold_elem, predictions):
-                        found = False
-                        pattern = r"{{(.*?)}}"
-                        try:
-                            gold_arg = re.findall(pattern, gold_elem, flags=0)[0].strip()
-                        except:
-                            return mrr_arg,recall1_arg,recall10_arg
-                    
-                        for idx,pred in enumerate(predictions):
-                            pattern = r"{{(.*?)}}"
-                            try:
-                                pred_arg = re.findall(pattern, pred, flags=0)[0].strip()
-                            except:
-                                if idx==0:
-                                    recall1_arg.append(0.)
-                                continue
-
-                            if idx == 0:
-                                if pred_arg == gold_arg:
-                                    recall1_arg.append(1.)
-                                    recall10_arg.append(1.)
-                                    mrr_arg.append(1.)
-                                    found=True
-                                    break
-                                else:
-                                    recall1_arg.append(0.)
-                            else:
-                                if pred_arg == gold_arg:
-                                    recall10_arg.append(1.)
-                                    mrr_arg.append(1./float(idx+1))
-                                    found=True
-                                    break
-
-                        if found ==False:
-                            recall10_arg.append(0.)
-                            mrr_arg.append(0.)
-
-                        return mrr_arg,recall1_arg,recall10_arg
-
-                    mrr_v, rec1v, rec10v = test_verb(gold_elem, new_predictions)
-                    mrr_a,rec1a, rec10a = test_arg(gold_elem, new_predictions)
-            
-
-            return  mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a
         
 
     def prediction_final(self,test_dataloader):
         self.model.eval()
-        with torch.no_grad():
+        with torch.no_grad(), torch.cuda.amp.autocast(enabled=True):
             recall1_verb =[]
             recall10_verb= []
             mrr_verb = []

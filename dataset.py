@@ -1,60 +1,21 @@
-from tqdm import tqdm
 import torch
+from tqdm import tqdm
 from torch.utils.data import Dataset
-import csv
-
 
 class Seq2SeqDatasetBART(Dataset):
-    def __init__(self, tokenizer, path_file, max_len, downsizing=None, k_action=None, k_object=None):
+    def __init__(self, tokenizer, path_file, max_len):
         self.tokenizer = tokenizer
         self.path_file = path_file
         self.data = []
-        self.downsizing = downsizing
-        self.k_action = k_action
-        self.k_object = k_object
         self.max_len = max_len
-
-        if self.downsizing!=None:
-            self.len_down = self.compute_len()
-        else:
-            self.len_down = 0
-        
         self.setup()
 
-    def compute_len(self):
-        with open(self.path_file) as f:
-            csv_train = list(csv.reader(f, delimiter="\t"))
-
-        return round((len(csv_train)*self.downsizing)/100)
-
     def setup(self):
-        all_verbs = []
-        all_objects = []
         with open(self.path_file) as f:
             for idx, line in tqdm(enumerate(f), desc='Reading lines'):
-                if self.len_down!=0:
-                    if idx >= self.len_down:
-                        break
 
                 line = line.strip()
                 line = line.split("\t")
-                if self.k_action !=None:
-                    if line[2] not in all_verbs:
-                        all_verbs.append(line[2])
-                    elif all_verbs.count(line[2]) < self.k_action:
-                        all_verbs.append(line[2])
-                    else:
-                        continue
-                
-                if self.k_object !=None:
-                    if line[4] not in all_objects:
-                        all_objects.append(line[4])
-                    elif all_objects.count(line[4]) < self.k_object:
-                        all_objects.append(line[4])
-                    else:
-                        continue
-
-
                 title = line[1]
                 split_title = title.split()
 
@@ -105,11 +66,10 @@ class Seq2SeqDatasetBART(Dataset):
                 elif self.max_len == 20:
                     target = [new_title]
                     
-                encoded_s,encoded_mask, encoded_t = self.encoded_sentences(encoded_source, target)
+                encoded_s, encoded_t = self.encoded_sentences(encoded_source, target)
 
                 data = {
                     "source": encoded_s,
-                    "attention_mask": encoded_mask,
                     "target":encoded_t,
                 }
                 self.data.append(data)
@@ -126,8 +86,6 @@ class Seq2SeqDatasetBART(Dataset):
         encoded_s = torch.tensor(encoded_source)
 
         encoded_target = self.tokenizer.encode(self.tokenizer.tokenize(target[0]), truncation = True, max_length=1024)
-
         encoded_t = torch.tensor(encoded_target)
-        encoded_mask = torch.ones((encoded_s.shape))
 
-        return encoded_s,encoded_mask,encoded_t
+        return encoded_s,encoded_t
