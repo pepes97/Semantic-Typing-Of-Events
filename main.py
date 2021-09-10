@@ -81,7 +81,7 @@ def main(model_path, only_test, type_model, batch_size, max_len):
         mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a = trainer.prediction_final(test_dataloader)
     else:
         print("\033[1m\033[92m Testing... \033[0m \n")
-        mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a = trainer.prediction_final(dev_dataloader)
+        mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a = trainer.prediction_final(test_dataloader)
           
     print(f"\033[1m***** VERBS ***** -> MRR: {str(np.average(mrr_v))}, RECALL@1: {str(np.average(rec1v))}, RECALL@10: {str(np.average(rec10v))} \033[0m \n")
     print(f"\033[1m***** ARGS ****** -> MRR: {str(np.average(mrr_a))}, RECALL@1: {str(np.average(rec1a))}, RECALL@10: {str(np.average(rec10a))} \033[0m")
