@@ -103,7 +103,6 @@ class TrainerBART:
                     for j in range(len(predictions)):
                         new_predictions.append(self.tokenizer.decode(predictions[j], skip_special_tokens=True))
                     
-
                     def test_verb(gold_elem, predictions):
                         found = False
                         pattern = r"{(.*?)}"
@@ -139,14 +138,10 @@ class TrainerBART:
 
                         return mrr_verb,recall1_verb,recall10_verb
 
-
                     def test_arg(gold_elem, predictions):
                         found = False
                         pattern = r"{{(.*?)}}"
-                        try:
-                            gold_arg = re.findall(pattern, gold_elem, flags=0)[0].strip()
-                        except:
-                            return mrr_arg,recall1_arg,recall10_arg
+                        gold_arg = re.findall(pattern, gold_elem, flags=0)[0].strip()          
                     
                         for idx,pred in enumerate(predictions):
                             pattern = r"{{(.*?)}}"
@@ -307,11 +302,7 @@ class TrainerBART:
                     def test_arg(gold_elem, args_pred):
                         found = False
                         pattern = r"{{(.*?)}}"
-                        try:
-                            gold_arg = re.findall(pattern, gold_elem, flags=0)[0].strip()
-                        except:
-                            return mrr_arg,recall1_arg,recall10_arg
-
+                        gold_arg = re.findall(pattern, gold_elem, flags=0)[0].strip()
                         
                         for idx,pred_arg in enumerate(args_pred):
                             if idx == 0:

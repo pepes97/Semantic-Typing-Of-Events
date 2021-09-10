@@ -60,7 +60,7 @@ def main(model_path, only_test, type_model, batch_size, max_len):
     trainer = TrainerBART(tokenizer,seq2seq,torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id), device, model_path, type_model, max_len)
     
     if  os.path.isfile(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_SEED10_lr2e-5.pt"):
-        trainer.model.load_state_dict(torch.load(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_SEED10_lr2e-5.pt", map_location=device))
+        trainer.model.load_state_dict(torch.load(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_SEED10_lr2e-5.pt", map_location=device), strict=False)
 
         print("\033[1mModel loaded \033[0m \n")
   
@@ -81,7 +81,7 @@ def main(model_path, only_test, type_model, batch_size, max_len):
         mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a = trainer.prediction_final(test_dataloader)
     else:
         print("\033[1m\033[92m Testing... \033[0m \n")
-        mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a = trainer.prediction_final(test_dataloader)
+        mrr_v, rec1v, rec10v, mrr_a,rec1a, rec10a = trainer.prediction_final(dev_dataloader)
           
     print(f"\033[1m***** VERBS ***** -> MRR: {str(np.average(mrr_v))}, RECALL@1: {str(np.average(rec1v))}, RECALL@10: {str(np.average(rec10v))} \033[0m \n")
     print(f"\033[1m***** ARGS ****** -> MRR: {str(np.average(mrr_a))}, RECALL@1: {str(np.average(rec1a))}, RECALL@10: {str(np.average(rec10a))} \033[0m")
@@ -90,7 +90,7 @@ if __name__ == "__main__":
   
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-path", type=str, required=True,
-                        help="the path where you want to save the model, you can to choose between: 'models/their_split', 'models/their_split_mixed', 'models/their_split_all_processes', 'models/their_split_WORD'")
+                        help="the path where you want to save the model, you can to choose between: 'models/their_split', 'models/their_split_mixed', 'models/their_split_all_processes'")
     parser.add_argument("--type-model", type=str, required=True, 
                         help="the model of BART, you can to choose between 'base' or 'large'")
     parser.add_argument("--batch-size", type=int, default=2,
