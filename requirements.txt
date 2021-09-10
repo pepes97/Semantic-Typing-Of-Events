@@ -1,6 +1,5 @@
 transformers
 tabulate
-sacrebleu
 numpy
 tqdm
 torch

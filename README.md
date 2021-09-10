@@ -4,8 +4,8 @@
 # Setup
 
 ```
-conda create --name semantic-typing-sveva python=3.7.10
-conda activate semantic-typing-sveva
+conda create --name step-seq2seq python=3.7.10
+conda activate step-seq2seq
 pip install -r requirements.txt
 ```
 

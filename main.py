@@ -60,7 +60,7 @@ def main(model_path, only_test, type_model, batch_size, max_len):
     trainer = TrainerBART(tokenizer,seq2seq,torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id), device, model_path, type_model, max_len)
     
     if  os.path.isfile(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_SEED10_lr2e-5.pt"):
-        trainer.model.load_state_dict(torch.load(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_SEED10_lr2e-5.pt", map_location=device), strict=False)
+        trainer.model.load_state_dict(torch.load(model_path + "/bart_model_"+type_model+model_directory(model_path)+"_len"+str(max_len)+"_SEED10_lr2e-5.pt", map_location=device))
 
         print("\033[1mModel loaded \033[0m \n")
   
