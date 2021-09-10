@@ -24,3 +24,9 @@ python main.py --model-path model_path --type-model type_model --batch-size batc
 `only_test` is the boolean for only testing the model, default is False
 
 `max_len` used to distinguish between with and without glosses, default is 20 refers to without glosses and 175 is with glosses
+
+for example:
+
+```
+python main.py --model-path models/their_split_all_processes --type-model large --batch-size 2
+```
