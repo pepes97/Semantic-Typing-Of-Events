@@ -15,7 +15,7 @@ pip install -r requirements.txt
 python main.py --model-path model_path --type-model type_model --batch-size batch_size --only-test only_test --max-len max_len
 ```
 
-`model_path` is the path where you want to save the model, you can to choose between: `models/their_split`, `models/their_split_mixed`, `models/their_split_all_processes`, `models/their_split_WORD`.  
+`model_path` is the path where you want to save the model, you can to choose between: `models/their_split`, `models/their_split_mixed`, `models/their_split_all_processes`.  
 
 `type_model` is the model of BART, you can to choose between `base` or `large`.
 
