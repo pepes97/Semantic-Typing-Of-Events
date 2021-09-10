@@ -6,7 +6,7 @@
 ```
 conda create --name step-seq2seq python=3.7.10
 conda activate step-seq2seq
-pip install -r requirements.txt
+pip install -r requirements.txt 
 ```
 
 # Run
@@ -25,8 +25,15 @@ python main.py --model-path model_path --type-model type_model --batch-size batc
 
 `max_len` used to distinguish between with and without glosses, default is 20 refers to without glosses and 175 is with glosses
 
-for example:
+
+for example for training phase:
 
 ```
 python main.py --model-path models/their_split_all_processes --type-model large --batch-size 2
+```
+
+for example for only testing phase:
+
+```
+python main.py --model-path models/their_split_all_processes --type-model large --batch-size 2 --only-test True
 ```
